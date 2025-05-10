@@ -1,43 +1,63 @@
 import os
+
 DATA_FILE = 'accounts.txt'
+
 def load_accounts():
     accounts = {}
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, 'r') as file:
             for line in file:
                 parts = line.strip().split(',')
-                if len(parts) == 4:
-                    username, password, balance,NIC_number = parts
-                    accounts[username] = {'password': password, 'NIC_number':NIC_number, 'balance': float(balance)}
+                if len(parts) == 5:
+                    account_number, username, NIC_number, password, balance = parts
+                    accounts[username] = {
+                        'account_number': account_number,
+                        'NIC_number': NIC_number,
+                        'password': password,
+                        'balance': float(balance)
+                    }
     return accounts
 
 def save_accounts(accounts):
     with open(DATA_FILE, 'w') as file:
         for username, info in accounts.items():
-            file.write(f"{username},{info['NIC_number']},{info['password']},{info['balance']}\n")
+            file.write(f"{info['account_number']},{username},{info['NIC_number']},{info['password']},{info['balance']}\n")
+
+def generate_account_number(accounts):
+    existing_numbers = [int(info['account_number']) for info in accounts.values()]
+    return str(max(existing_numbers, default=100000) + 1)
 
 def create_account(accounts):
-    NIC_number = input("Enter your NIC_number:")
-    if NIC_number in accounts:
-        print("NIC_number already exists.")
+    NIC_number = input("Enter your NIC number: ").strip()
+    if any(info['NIC_number'] == NIC_number for info in accounts.values()):
+        print("NIC number already exists.")
         return
-    username = input("Enter new username: ")
+
+    username = input("Enter new username: ").strip()
     if username in accounts:
         print("Username already exists.")
         return
-    password = input("Enter password: ")
+
+    password = input("Enter password: ").strip()
     try:
         balance = float(input("Enter initial balance: "))
     except ValueError:
         print("Invalid balance. Account not created.")
         return
-   
-    accounts[username] = {'password': password, 'balance': balance,'NIC_number':NIC_number}
-    print("Account created successfully.")
+
+    account_number = generate_account_number(accounts)
+    accounts[username] = {
+        'account_number': account_number,
+        'password': password,
+        'balance': balance,
+        'NIC_number': NIC_number
+    }
+
+    print(f"Account created successfully! Your account number is: {account_number}")
 
 def user_login(accounts):
-    username = input("Username: ")
-    password = input("Password: ")
+    username = input("Username: ").strip()
+    password = input("Password: ").strip()
     user = accounts.get(username)
     if user and user['password'] == password:
         print(f"Welcome {username}!")
@@ -48,10 +68,12 @@ def user_login(accounts):
 def user_menu(accounts, username):
     while True:
         print(f"\n--- {username.upper()}'s ACCOUNT ---")
+        print(f"Account Number: {accounts[username]['account_number']}")
         print("1. Check Balance")
         print("2. Deposit")
         print("3. Withdraw")
-        print("4. Logout")
+        print("4. Transfer money")
+        print("5. Logout")
         choice = input("Enter your choice: ")
 
         if choice == '1':
@@ -61,6 +83,8 @@ def user_menu(accounts, username):
         elif choice == '3':
             withdraw(accounts, username)
         elif choice == '4':
+            transfer_money(accounts, username)
+        elif choice == '5':
             save_accounts(accounts)
             print("Logged out.")
             break
@@ -95,6 +119,24 @@ def withdraw(accounts, username):
     except ValueError:
         print("Invalid input.")
 
+def transfer_money(accounts, sender):
+    receiver = input("Enter recipient username: ").strip()
+    if receiver not in accounts:
+        print("Recipient account not found.")
+        return
+    try:
+        amount = float(input("Enter amount to transfer: "))
+        if amount <= 0:
+            print("Invalid amount.")
+        elif amount > accounts[sender]['balance']:
+            print("Insufficient funds.")
+        else:
+            accounts[sender]['balance'] -= amount
+            accounts[receiver]['balance'] += amount
+            print(f"${amount:.2f} transferred to {receiver}.")
+    except ValueError:
+        print("Invalid input.")
+
 def main():
     accounts = load_accounts()
 
@@ -117,13 +159,5 @@ def main():
         else:
             print("Invalid option. Please choose again.")
 
-
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
